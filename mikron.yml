@@ -1,0 +1,7 @@
+---
+- hosts: web_servers
+  become: true
+  tasks:
+    - name: Nginx Install
+      ansible.builtin.package:
+        name: nginx
