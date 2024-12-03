@@ -1,0 +1,10 @@
+---
+- name: Выполнение команд на серверах
+  hosts: mikron_servers
+  become: yes
+
+  tasks:
+    - name: Выполнение команд
+      shell: "{{ item }} -y"
+      loop: "{{ commands.split(',') | map('trim') | list }}"
+      when: commands is defined
