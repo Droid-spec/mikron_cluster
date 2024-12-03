@@ -6,7 +6,7 @@
   tasks:
     - name: Установка или удаление пакетов
       package:
-        name: "{{ item.name }}"
-        state: "{{ item.state }}"
-      loop: "{{ packages | flatten }}"
+        name: "{{ item }}"
+        state: present  # Устанавливаем все пакеты, если нет состояния удаления
+      loop: "{{ packages }}"
       when: packages is defined
