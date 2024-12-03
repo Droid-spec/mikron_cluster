@@ -8,4 +8,4 @@
       package:
         name: "{{ item }}"
         state: present
-      loop: "{{ packeges }}"
+      loop: "{{ packages }}"
