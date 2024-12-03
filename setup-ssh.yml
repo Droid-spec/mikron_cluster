@@ -25,6 +25,7 @@
         dest: /root/.ssh/authorized_keys
         owner: root
         mode: '0600'
+        remote_src: no  # Указываем, что файл на контроллере, а не на удалённом сервере
       when: key_check.stat.exists
       notify: Restart SSH
 
@@ -34,7 +35,7 @@
       args:
         creates: /root/.ssh/id_rsa  # Генерация будет пропущена, если ключ уже существует
 
-    # 4. Проверка подключения по ключу
+    # 4. Проверка подключения по SSH
     - name: Проверка подключения по ключу
       shell: ssh -o PasswordAuthentication=no -o StrictHostKeyChecking=no root@{{ inventory_hostname }} exit
       register: ssh_check
