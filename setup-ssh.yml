@@ -41,14 +41,7 @@
       notify:
         - Перезапуск SSH
 
-    # 5. Перезапустить SSH, чтобы применить изменения
-    handlers:
-      - name: Перезапуск SSH
-        service:
-          name: ssh
-          state: restarted
-
-    # 6. Повторная проверка входа по ключу
+    # 5. Повторная проверка подключения по ключу
     - name: Повторная проверка подключения по ключу
       shell: ssh -o PasswordAuthentication=no -o StrictHostKeyChecking=no root@{{ inventory_hostname }} exit
       register: final_ssh_check
@@ -58,3 +51,10 @@
       fail:
         msg: "После отключения входа по паролю невозможно подключиться к серверу {{ inventory_hostname }}!"
       when: final_ssh_check.rc != 0
+
+# Секция handlers должна находиться на том же уровне, что и tasks
+  handlers:
+    - name: Перезапуск SSH
+      service:
+        name: ssh
+        state: restarted
