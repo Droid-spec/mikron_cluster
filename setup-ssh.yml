@@ -3,34 +3,36 @@
   hosts: all  # Укажите группу серверов кластера из вашего inventory
   become: yes  # Поднимаем права до root
   vars:
-    ansible_ssh_private_key_file: "/root/.ssh/id_rsa_ansible"  # Указываем полный путь
+    ansible_ssh_private_key_file: "/root/.ssh/id_rsa_ansible"  # Путь к приватному ключу на главном сервере
 
   tasks:
-    # 1. Создание SSH-ключа на каждом сервере
-    - name: Генерация SSH-ключа на серверах
-      command: ssh-keygen -t rsa -b 4096 -f /root/.ssh/id_rsa -N ""
-      args:
-        creates: /root/.ssh/id_rsa  # Генерация будет пропущена, если ключ уже существует
-
-    # 2. Скопировать публичный ключ главного сервера на сервера кластера
+    # 1. Проверка существования публичного ключа главного сервера
     - name: Проверка существования публичного ключа главного сервера
       stat:
         path: /root/.ssh/id_rsa_ansible.pub
       register: key_check
 
+    # 2. Остановить выполнение, если публичный ключ не найден
     - name: Остановить выполнение, если публичный ключ не найден
       fail:
-        msg: "Публичный ключ /root/.ssh/id_rsa_ansible.pub не найден на контроллере!"
+        msg: "Публичный ключ /root/.ssh/id_rsa_ansible.pub не найден на главном сервере!"
       when: key_check.stat.exists == false
 
+    # 3. Генерация SSH-ключа на серверах
+    - name: Генерация SSH-ключа на серверах
+      command: ssh-keygen -t rsa -b 4096 -f /root/.ssh/id_rsa -N ""
+      args:
+        creates: /root/.ssh/id_rsa  # Генерация будет пропущена, если ключ уже существует
+
+    # 4. Копирование публичного ключа главного сервера на сервера кластера
     - name: Копирование публичного ключа главного сервера
       copy:
-        src: /root/.ssh/id_rsa_ansible.pub
-        dest: /root/.ssh/authorized_keys
+        src: /root/.ssh/id_rsa_ansible.pub  # Путь к публичному ключу главного сервера
+        dest: /root/.ssh/authorized_keys  # Копирование в authorized_keys
         owner: root
         mode: '0600'
 
-    # 3. Проверка входа по ключу
+    # 5. Проверка подключения по ключу
     - name: Проверка подключения по ключу
       shell: ssh -o PasswordAuthentication=no -o StrictHostKeyChecking=no root@{{ inventory_hostname }} exit
       register: ssh_check
@@ -41,7 +43,7 @@
         msg: "Не удалось подключиться по ключу к серверу {{ inventory_hostname }}!"
       when: ssh_check.rc != 0  # Ошибка, если код возврата команды не равен 0
 
-    # 4. Отключить вход по паролю
+    # 6. Отключить вход по паролю
     - name: Отключить вход по паролю
       lineinfile:
         path: /etc/ssh/sshd_config
@@ -51,7 +53,7 @@
       notify:
         - Перезапуск SSH
 
-    # 5. Повторная проверка подключения по ключу
+    # 7. Повторная проверка подключения по ключу
     - name: Повторная проверка подключения по ключу
       shell: ssh -o PasswordAuthentication=no -o StrictHostKeyChecking=no root@{{ inventory_hostname }} exit
       register: final_ssh_check
@@ -62,7 +64,6 @@
         msg: "После отключения входа по паролю невозможно подключиться к серверу {{ inventory_hostname }}!"
       when: final_ssh_check.rc != 0
 
-  # Секция handlers должна находиться на том же уровне, что и tasks
   handlers:
     - name: Перезапуск SSH
       service:
