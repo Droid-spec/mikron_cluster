@@ -1,10 +1,9 @@
-- hosts: localhost
+---
+- hosts: all
   tasks:
-    - name: Проверка существования файла
-      stat:
-        path: /root/.ssh/id_rsa_ansible.pub
-      register: key_file
-
-    - name: Вывод информации о файле
-      debug:
-        var: key_file.stat.exists
+  
+  - name: Set authorized key taken from file
+    ansible.posix.authorized_key:
+      user: root
+      state: present
+      key: "{{ lookup('file', '/root/.ssh/id_rsa.pub') }}"
