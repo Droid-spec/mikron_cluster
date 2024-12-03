@@ -1,5 +1,5 @@
 ---
-- name: Deploy SSH key to cluster nodes
+- name: Add SSH key to authorized_keys
   hosts: all
   become: true
   tasks:
@@ -8,11 +8,14 @@
         path: /root/.ssh
         state: directory
         mode: '0700'
+        owner: root
+        group: root
 
-    - name: Copy SSH public key to authorized_keys
-      copy:
-        src: /root/.ssh/id_rsa.pub
-        dest: /root/.ssh/authorized_keys
+    - name: Add public key to authorized_keys
+      lineinfile:
+        path: /root/.ssh/authorized_keys
+        line: "{{ lookup('file', '/root/.ssh/id_rsa.pub') }}"
+        create: yes
         owner: root
         group: root
         mode: '0600'
