@@ -1,5 +1,5 @@
 ---
-- name: Manage SSH keys and disable password authentication
+- name: Manage SSH keys and disable password authentication on cluster nodes
   hosts: all
   become: true
   tasks:
@@ -35,15 +35,14 @@
       changed_when: false
       failed_when: ssh_test.rc != 0
 
-    - name: Disable password authentication
+    - name: Disable password authentication on target servers
       lineinfile:
         path: /etc/ssh/sshd_config
         regexp: '^#?PasswordAuthentication'
         line: 'PasswordAuthentication no'
         state: present
 
-    - name: Restart SSH service
+    - name: Restart SSH service on target servers
       service:
         name: sshd
         state: restarted
-      when: ssh_test.rc == 0
