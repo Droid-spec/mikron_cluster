@@ -3,27 +3,29 @@
   hosts: all
   become: yes  # Поднимаем права до root
   vars:
-    ansible_ssh_private_key_file: ~/.ssh/id_rsa_ansible
+    ansible_ssh_private_key_file: /etc/ansible/keys/id_rsa_ansible
 
   tasks:
     # 1. Проверка существования публичного ключа на главном сервере
     - name: Проверка наличия публичного ключа главного сервера
       stat:
-        path: /root/.ssh/id_rsa_ansible.pub
+        path: /etc/ansible/keys/id_rsa_ansible.pub
       register: key_check
 
     - name: Остановить выполнение, если публичный ключ не найден
       fail:
-        msg: "Публичный ключ /root/.ssh/id_rsa_ansible.pub не найден на главном сервере!"
+        msg: "Публичный ключ /etc/ansible/keys/id_rsa_ansible.pub не найден на главном сервере!"
       when: not key_check.stat.exists
 
     # 2. Копирование публичного ключа на сервера
     - name: Копирование публичного ключа главного сервера на сервера кластера
       copy:
-        src: /root/.ssh/id_rsa_ansible.pub
+        src: /etc/ansible/keys/id_rsa_ansible.pub
         dest: /root/.ssh/authorized_keys
         owner: root
         mode: '0600'
+      when: key_check.stat.exists
+      notify: Restart SSH
 
     # 3. Генерация SSH-ключа на серверах
     - name: Генерация SSH-ключа на серверах
