@@ -3,7 +3,7 @@
   become: true
   become_method: sudo
   become_user: root
-  become_password: "{{ sudo_password }}"
+  #become_password: "{{ sudo_password }}"
   tasks:
     - name: Проверка наличия публичного ключа на контроллере
       stat:
