@@ -1,0 +1,10 @@
+- hosts: localhost
+  tasks:
+    - name: Проверка существования файла
+      stat:
+        path: /root/.ssh/id_rsa_ansible.pub
+      register: key_file
+
+    - name: Вывод информации о файле
+      debug:
+        var: key_file.stat.exists
