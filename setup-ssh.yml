@@ -24,6 +24,8 @@
         dest: /root/.ssh/authorized_keys
         owner: root
         mode: '0600'
+      when: key_check.stat.exists
+      notify: Restart SSH
 
     # 3. Генерация SSH-ключа на серверах
     - name: Генерация SSH-ключа на серверах
