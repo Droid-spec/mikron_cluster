@@ -1,0 +1,11 @@
+---
+- name: Установка пакетов для серверов
+  hosts: mikron_servers
+  become: yes
+  
+  tasks:
+    - name: Установка выбранных пакетов
+      package:
+        name: "{{ item }}"
+        state: present
+      loop: "{{ packeges }}"
