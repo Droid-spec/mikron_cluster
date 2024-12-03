@@ -1,4 +1,3 @@
----
 - name: Настройка SSH-доступа для кластера
   hosts: all
   become: true
@@ -9,6 +8,11 @@
       register: ssh_key_stat
       ignore_errors: true
 
+    - name: Остановить выполнение, если публичный ключ не найден
+      fail:
+        msg: "Публичный ключ не найден на контроллере."
+      when: not ssh_key_stat.stat.exists
+
     - name: Копирование публичного ключа на сервера
       become: true
       become_user: root
@@ -16,11 +20,7 @@
         src: /root/.ssh/id_rsa.pub
       register: slurped_key
       delegate_to: localhost
-
-    - name: Остановить выполнение, если публичный ключ не найден
-      fail:
-        msg: "Публичный ключ не найден на контроллере."
-      when: not ssh_key_stat.stat.exists
+      when: ssh_key_stat.stat.exists
 
     - name: Создание директории для ключей на целевых серверах
       file:
