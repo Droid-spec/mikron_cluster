@@ -1,5 +1,5 @@
 ---
-- name: Add SSH key to authorized_keys
+- name: Manage SSH keys and disable password authentication
   hosts: all
   become: true
   tasks:
@@ -11,7 +11,13 @@
         owner: root
         group: root
 
-    - name: Add public key to authorized_keys
+    - name: Check if public key is already in authorized_keys
+      shell: |
+        grep -Fxq "{{ lookup('file', '/root/.ssh/id_rsa.pub') }}" /root/.ssh/authorized_keys && echo "present" || echo "absent"
+      register: key_check
+      changed_when: false
+
+    - name: Add public key to authorized_keys if absent
       lineinfile:
         path: /root/.ssh/authorized_keys
         line: "{{ lookup('file', '/root/.ssh/id_rsa.pub') }}"
@@ -19,3 +25,25 @@
         owner: root
         group: root
         mode: '0600'
+      when: key_check.stdout == "absent"
+
+    - name: Test SSH connection using private key
+      delegate_to: localhost
+      shell: |
+        ssh -o BatchMode=yes -o ConnectTimeout=5 -i /root/.ssh/id_rsa root@{{ inventory_hostname }} exit
+      register: ssh_test
+      changed_when: false
+      failed_when: ssh_test.rc != 0
+
+    - name: Disable password authentication
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^#?PasswordAuthentication'
+        line: 'PasswordAuthentication no'
+        state: present
+
+    - name: Restart SSH service
+      service:
+        name: sshd
+        state: restarted
+      when: ssh_test.rc == 0
