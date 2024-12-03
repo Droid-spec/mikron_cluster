@@ -1,11 +1,12 @@
 ---
-- name: Установка пакетов для серверов
+- name: Установка или удаление пакетов для серверов
   hosts: mikron_servers
   become: yes
   
   tasks:
-    - name: Установка выбранных пакетов
+    - name: Установка или удаление пакетов
       package:
-        name: "{{ item }}"
-        state: present
-      loop: "{{ packages }}"
+        name: "{{ item.name }}"
+        state: "{{ item.state }}"
+      loop: "{{ packages | flatten }}"
+      when: packages is defined
