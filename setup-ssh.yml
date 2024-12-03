@@ -11,13 +11,11 @@
       stat:
         path: /root/.ssh/id_rsa_ansible.pub
       register: key_check
-      delegate_to: localhost  # Выполняется на главном сервере
 
     - name: Остановить выполнение, если публичный ключ не найден
       fail:
         msg: "Публичный ключ /root/.ssh/id_rsa_ansible.pub не найден на главном сервере!"
       when: not key_check.stat.exists
-      delegate_to: localhost  # Выполняется на главном сервере
 
     # 2. Копирование публичного ключа на сервера
     - name: Копирование публичного ключа главного сервера на сервера кластера
@@ -26,8 +24,6 @@
         dest: /root/.ssh/authorized_keys
         owner: root
         mode: '0600'
-      when: key_check.stat.exists
-      notify: Restart SSH
 
     # 3. Генерация SSH-ключа на серверах
     - name: Генерация SSH-ключа на серверах
