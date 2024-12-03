@@ -7,8 +7,8 @@
     ansible_ssh_public_key_file: /root/.ssh/id_rsa.pub
 
   tasks:
-    # 1. Проверка существования публичного ключа на главном сервере
-    - name: Проверка наличия публичного ключа главного сервера
+    # 1. Проверка существования публичного ключа на контроллере
+    - name: Проверка наличия публичного ключа на контроллере
       stat:
         path: /root/.ssh/id_rsa.pub
       register: key_check
@@ -18,24 +18,18 @@
         msg: "Публичный ключ /root/.ssh/id_rsa.pub не найден на главном сервере!"
       when: not key_check.stat.exists
 
-    # 2. Копирование публичного ключа главного сервера на сервера кластера
-    - name: Копирование публичного ключа главного сервера на сервера кластера
+    # 2. Копирование публичного ключа с контроллера на сервера кластера
+    - name: Копирование публичного ключа на сервера кластера
       copy:
-        src: /root/.ssh/id_rsa.pub  # Путь на контроллере (главном сервере)
-        dest: /root/.ssh/authorized_keys
+        src: /root/.ssh/id_rsa.pub  # Путь к публичному ключу на контроллере
+        dest: /root/.ssh/authorized_keys  # Местоположение на удалённых серверах
         owner: root
         mode: '0600'
-        remote_src: no  # Указываем, что файл на контроллере, а не на удалённом сервере
+        append: yes  # Добавляем ключ в конец файла, не перезаписывая его
       when: key_check.stat.exists
       notify: Restart SSH
 
-    # 3. Генерация SSH-ключа на серверах (если они не существуют)
-    - name: Генерация SSH-ключа на серверах
-      command: ssh-keygen -t rsa -b 4096 -f /root/.ssh/id_rsa -N ""
-      args:
-        creates: /root/.ssh/id_rsa  # Генерация будет пропущена, если ключ уже существует
-
-    # 4. Проверка подключения по SSH
+    # 3. Проверка подключения по SSH с использованием ключа
     - name: Проверка подключения по ключу
       shell: ssh -o PasswordAuthentication=no -o StrictHostKeyChecking=no root@{{ inventory_hostname }} exit
       register: ssh_check
@@ -46,7 +40,7 @@
         msg: "Не удалось подключиться по ключу к серверу {{ inventory_hostname }}!"
       when: ssh_check.rc != 0  # Ошибка, если код возврата команды не равен 0
 
-    # 5. Отключить вход по паролю
+    # 4. Отключить вход по паролю
     - name: Отключить вход по паролю
       lineinfile:
         path: /etc/ssh/sshd_config
@@ -56,8 +50,8 @@
       notify:
         - Перезапуск SSH
 
-    # 6. Повторная проверка подключения по ключу
-    - name: Повторная проверка подключения по ключу
+    # 5. Повторная проверка подключения по ключу
+    - name: Повторная проверка подключения по ключу после отключения пароля
       shell: ssh -o PasswordAuthentication=no -o StrictHostKeyChecking=no root@{{ inventory_hostname }} exit
       register: final_ssh_check
       ignore_errors: true
