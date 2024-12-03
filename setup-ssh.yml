@@ -28,11 +28,10 @@
     # 3. Копирование публичного ключа главного сервера на сервера кластера
     - name: Копирование публичного ключа главного сервера на сервера кластера
       copy:
-        src: /root/.ssh/id_rsa.pub
+        src: /root/.ssh/id_rsa.pub  # Путь на контроллере (главном сервере)
         dest: /root/.ssh/authorized_keys
         owner: root
         mode: '0600'
-        remote_src: yes  # Указывает, что файл на удалённой машине
       when: key_check.stat.exists
       notify: Restart SSH
 
