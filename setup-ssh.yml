@@ -3,7 +3,7 @@
   hosts: all  # Укажите группу серверов кластера из вашего inventory
   become: yes  # Поднимаем права до root
   vars:
-    ansible_ssh_private_key_file: ~/.ssh/id_rsa_ansible
+    ansible_ssh_private_key_file: "/root/.ssh/id_rsa_ansible"  # Указываем полный путь
 
   tasks:
     # 1. Создание SSH-ключа на каждом сервере
@@ -13,13 +13,22 @@
         creates: /root/.ssh/id_rsa  # Генерация будет пропущена, если ключ уже существует
 
     # 2. Скопировать публичный ключ главного сервера на сервера кластера
+    - name: Проверка существования публичного ключа главного сервера
+      stat:
+        path: /root/.ssh/id_rsa_ansible.pub
+      register: key_check
+
+    - name: Остановить выполнение, если публичный ключ не найден
+      fail:
+        msg: "Публичный ключ /root/.ssh/id_rsa_ansible.pub не найден на контроллере!"
+      when: key_check.stat.exists == false
+
     - name: Копирование публичного ключа главного сервера
       copy:
         src: /root/.ssh/id_rsa_ansible.pub
         dest: /root/.ssh/authorized_keys
         owner: root
         mode: '0600'
-
 
     # 3. Проверка входа по ключу
     - name: Проверка подключения по ключу
@@ -53,7 +62,7 @@
         msg: "После отключения входа по паролю невозможно подключиться к серверу {{ inventory_hostname }}!"
       when: final_ssh_check.rc != 0
 
-# Секция handlers должна находиться на том же уровне, что и tasks
+  # Секция handlers должна находиться на том же уровне, что и tasks
   handlers:
     - name: Перезапуск SSH
       service:
