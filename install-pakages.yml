@@ -7,6 +7,6 @@
     - name: Установка или удаление пакетов
       package:
         name: "{{ item }}"
-        state: present
-      loop: "{{ packages | list }}"  # Преобразуем в список, если передано одно значение
+        state: present  # или absent, если хотите удалять
+      loop: "{{ packages.split(',') | map('trim') | list }}"
       when: packages is defined
