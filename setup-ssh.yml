@@ -10,7 +10,8 @@
       ignore_errors: true
 
     - name: Копирование публичного ключа на сервера
-      when: ssh_key_stat.stat.exists
+      become: true
+      become_user: root
       slurp:
         src: /root/.ssh/id_rsa.pub
       register: slurped_key
