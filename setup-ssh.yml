@@ -1,49 +1,49 @@
 ---
 - name: Настройка SSH-доступа для кластера
   hosts: all
-  become: yes
+  become: true
   tasks:
-
-    - name: Собираем факты о системе
-      ansible.builtin.gather_facts:
-
     - name: Проверка наличия публичного ключа на контроллере
       stat:
         path: /root/.ssh/id_rsa.pub
       register: ssh_key_stat
+      ignore_errors: true
+
+    - name: Копирование публичного ключа на сервера
+      delegate_to: localhost
+      when: ssh_key_stat.stat.exists
+      slurp:
+        src: /root/.ssh/id_rsa.pub
+      register: slurped_key
 
     - name: Остановить выполнение, если публичный ключ не найден
       fail:
-        msg: "Публичный ключ /root/.ssh/id_rsa.pub не найден на контроллере."
+        msg: "Публичный ключ не найден на контроллере."
       when: not ssh_key_stat.stat.exists
 
-    - name: Копирование публичного ключа на сервера кластера
-      copy:
-        src: /root/.ssh/id_rsa.pub
-        dest: /root/.ssh/authorized_keys
-        owner: root
-        group: root
-        mode: '0600'
+    - name: Создание директории для ключей на целевых серверах
+      file:
+        path: /root/.ssh
+        state: directory
+        mode: '0700'
+
+    - name: Добавление публичного ключа на сервера
+      authorized_key:
+        user: root
+        state: present
+        key: "{{ slurped_key.content | b64decode }}"
+        path: /root/.ssh/authorized_keys
       when: ssh_key_stat.stat.exists
-
-    - name: Проверка возможности подключения по SSH с использованием ключа
-      command: ssh -o PasswordAuthentication=no -o StrictHostKeyChecking=no -i /root/.ssh/id_rsa root@{{ inventory_hostname }} "echo 'SSH key-based authentication is working.'"
-      register: ssh_check
-      ignore_errors: yes
-
-    - name: Остановить выполнение, если SSH-ключ не работает
-      fail:
-        msg: "Не удалось подключиться по SSH с использованием ключа на {{ inventory_hostname }}."
-      when: ssh_check.rc != 0
 
     - name: Отключение парольного доступа
       lineinfile:
         path: /etc/ssh/sshd_config
         regexp: '^#?PasswordAuthentication'
         line: 'PasswordAuthentication no'
-        state: present
+      notify: Перезапуск SSH
 
-    - name: Перезапуск SSH-сервиса для применения изменений
+  handlers:
+    - name: Перезапуск SSH
       service:
         name: sshd
         state: restarted
