@@ -1,68 +1,49 @@
 ---
 - name: Настройка SSH-доступа для кластера
   hosts: all
-  become: yes  # Поднимаем права до root
-  vars:
-    ansible_ssh_private_key_file: /root/.ssh/id_rsa
-    ansible_ssh_public_key_file: /root/.ssh/id_rsa.pub
-
+  become: yes
   tasks:
-    # 1. Проверка существования публичного ключа на контроллере
+
+    - name: Собираем факты о системе
+      ansible.builtin.gather_facts:
+
     - name: Проверка наличия публичного ключа на контроллере
       stat:
         path: /root/.ssh/id_rsa.pub
-      register: key_check
+      register: ssh_key_stat
 
     - name: Остановить выполнение, если публичный ключ не найден
       fail:
-        msg: "Публичный ключ /root/.ssh/id_rsa.pub не найден на главном сервере!"
-      when: not key_check.stat.exists
+        msg: "Публичный ключ /root/.ssh/id_rsa.pub не найден на контроллере."
+      when: not ssh_key_stat.stat.exists
 
-    # 2. Копирование публичного ключа с контроллера на сервера кластера
     - name: Копирование публичного ключа на сервера кластера
       copy:
-        src: /root/.ssh/id_rsa.pub  # Путь к публичному ключу на контроллере
-        dest: /root/.ssh/authorized_keys  # Местоположение на удалённых серверах
+        src: /root/.ssh/id_rsa.pub
+        dest: /root/.ssh/authorized_keys
         owner: root
+        group: root
         mode: '0600'
-        append: yes  # Добавляем ключ в конец файла, не перезаписывая его
-      when: key_check.stat.exists
-      notify: Restart SSH
+      when: ssh_key_stat.stat.exists
 
-    # 3. Проверка подключения по SSH с использованием ключа
-    - name: Проверка подключения по ключу
-      shell: ssh -o PasswordAuthentication=no -o StrictHostKeyChecking=no root@{{ inventory_hostname }} exit
+    - name: Проверка возможности подключения по SSH с использованием ключа
+      command: ssh -o PasswordAuthentication=no -o StrictHostKeyChecking=no -i /root/.ssh/id_rsa root@{{ inventory_hostname }} "echo 'SSH key-based authentication is working.'"
       register: ssh_check
-      ignore_errors: true  # Игнорируем ошибки, чтобы обработать их вручную позже
+      ignore_errors: yes
 
-    - name: Убедиться, что вход по ключу работает
+    - name: Остановить выполнение, если SSH-ключ не работает
       fail:
-        msg: "Не удалось подключиться по ключу к серверу {{ inventory_hostname }}!"
-      when: ssh_check.rc != 0  # Ошибка, если код возврата команды не равен 0
+        msg: "Не удалось подключиться по SSH с использованием ключа на {{ inventory_hostname }}."
+      when: ssh_check.rc != 0
 
-    # 4. Отключить вход по паролю
-    - name: Отключить вход по паролю
+    - name: Отключение парольного доступа
       lineinfile:
         path: /etc/ssh/sshd_config
         regexp: '^#?PasswordAuthentication'
         line: 'PasswordAuthentication no'
         state: present
-      notify:
-        - Перезапуск SSH
 
-    # 5. Повторная проверка подключения по ключу
-    - name: Повторная проверка подключения по ключу после отключения пароля
-      shell: ssh -o PasswordAuthentication=no -o StrictHostKeyChecking=no root@{{ inventory_hostname }} exit
-      register: final_ssh_check
-      ignore_errors: true
-
-    - name: Убедиться, что вход по ключу после отключения пароля работает
-      fail:
-        msg: "После отключения входа по паролю невозможно подключиться к серверу {{ inventory_hostname }}!"
-      when: final_ssh_check.rc != 0
-
-  handlers:
-    - name: Перезапуск SSH
+    - name: Перезапуск SSH-сервиса для применения изменений
       service:
-        name: ssh
+        name: sshd
         state: restarted
