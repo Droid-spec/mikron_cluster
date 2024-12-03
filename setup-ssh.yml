@@ -15,7 +15,7 @@
     # 2. Скопировать публичный ключ главного сервера на сервера кластера
     - name: Копирование публичного ключа главного сервера
       copy:
-        src: ~/.ssh/id_rsa_ansible.pub
+        src: /root/.ssh/id_rsa_ansible.pub  # Абсолютный путь до публичного ключа
         dest: /root/.ssh/authorized_keys
         owner: root
         mode: '0600'
