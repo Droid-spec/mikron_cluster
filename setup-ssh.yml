@@ -10,11 +10,11 @@
       ignore_errors: true
 
     - name: Копирование публичного ключа на сервера
-      delegate_to: localhost
       when: ssh_key_stat.stat.exists
       slurp:
         src: /root/.ssh/id_rsa.pub
       register: slurped_key
+      delegate_to: localhost
 
     - name: Остановить выполнение, если публичный ключ не найден
       fail:
