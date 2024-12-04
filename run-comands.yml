@@ -19,3 +19,7 @@
           Ошибки:
           {{ item.stderr_lines | join('\n') }}
       loop: "{{ command_outputs.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+      vars:
+        ansible_log_messages: true
