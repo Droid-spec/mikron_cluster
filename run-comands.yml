@@ -5,7 +5,7 @@
 
   tasks:
     - name: Выполнение команд
-      shell: "{{ item }} -y"
+      shell: "{{ item }}"
       loop: "{{ commands.split(',') | map('trim') | list }}"
       when: commands is defined
       register: command_outputs
