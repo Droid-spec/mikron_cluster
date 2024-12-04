@@ -10,17 +10,12 @@
       when: commands is defined
       register: command_outputs
 
-    - name: Вывод результатов выполнения команд в столбик
+    - name: Вывод результатов выполнения команд
       debug:
         msg: |
           Команда: {{ item.item }}
           Результат:
-          {{ item.stdout_lines | join('\n') }}
+          {{ item.stdout }}
           Ошибки:
-          {{ item.stderr_lines | join('\n') }}
+          {{ item.stderr }}
       loop: "{{ command_outputs.results }}"
-      loop_control:
-        label: "{{ item.item }}"
-      vars:
-        ansible_log_messages: true
-
