@@ -1,8 +1,14 @@
-- name: Set debconf selection for iperf3 autostart
-  shell: echo "iperf3 iperf3/autostart boolean true" | debconf-set-selections
+---
+- name: Install iperf3 with autostart enabled
+  hosts: all
+  become: true
 
-- name: Install iperf3
-  apt:
-    name: iperf3
-    state: present
-    update_cache: yes
+  tasks:
+    - name: Set debconf selection for iperf3 autostart
+      ansible.builtin.shell: echo "iperf3 iperf3/autostart boolean true" | debconf-set-selections
+
+    - name: Install iperf3
+      ansible.builtin.apt:
+        name: iperf3
+        state: present
+        update_cache: yes
