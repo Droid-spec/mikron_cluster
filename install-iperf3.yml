@@ -1,5 +1,5 @@
 ---
-- name: Install iperf3 with autostart enabled
+- name: Install and configure iperf3 with autostart
   hosts: all
   become: true
 
@@ -12,3 +12,9 @@
         name: iperf3
         state: present
         update_cache: yes
+
+    - name: Enable and start iperf3 service
+      ansible.builtin.service:
+        name: iperf3
+        enabled: yes
+        state: started
