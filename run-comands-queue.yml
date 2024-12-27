@@ -1,0 +1,22 @@
+---
+- name: Выполнение команд на серверах
+  hosts: mikron_servers
+  become: yes
+  serial: 1  # Выполнять задания только на одном сервере за раз
+
+  tasks:
+    - name: Выполнение команд
+      shell: "{{ item }}"
+      loop: "{{ commands.split(',') | map('trim') | list }}"
+      when: commands is defined
+      register: command_outputs
+
+    - name: Вывод результатов выполнения команд
+      debug:
+        msg: |
+          Команда: {{ item.item }}
+          Результат:
+          {{ item.stdout }}
+          Ошибки:
+          {{ item.stderr }}
+      loop: "{{ command_outputs.results }}"
